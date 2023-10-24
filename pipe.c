@@ -17,7 +17,9 @@ int main(int argc, char *argv[]) {
             perror("Pipe creation failed");
             exit(EXIT_FAILURE);
         }
+    }
 
+    for (int i = 0; i < argc - 1; i++) {
         pid_t pid = fork();
         if (pid == -1) {
             perror("Fork failed");
@@ -28,39 +30,26 @@ int main(int argc, char *argv[]) {
                 close(pipes[i - 1][0]);
                 close(pipes[i - 1][1]);
             }
-
-            dup2(pipes[i][1], STDOUT_FILENO);
-            close(pipes[i][0]);
-            close(pipes[i][1]);
+            
+            if (i != argc - 2) { // Not the last command
+                dup2(pipes[i][1], STDOUT_FILENO);
+            }
+            
+            for (int j = 0; j < argc - 1; j++) {
+                close(pipes[j][0]);
+                close(pipes[j][1]);
+            }
 
             char *args[] = {argv[i + 1], NULL};
             execvp(args[0], args);
             perror("Exec Error");
             exit(EXIT_FAILURE);
-        } else { // Parent process
-            close(pipes[i][1]);
-            if (i != 0) {
-                close(pipes[i - 1][0]);
-            }
-        }
+        } 
     }
 
-    pid_t last_thread_pid = fork();
-    if (last_thread_pid == -1) {
-        perror("Fork Error");
-        exit(EXIT_FAILURE);
-    } else if (last_thread_pid == 0) {
-        if (argc > 2) {
-            dup2(pipes[argc - 2][0], STDIN_FILENO);
-            close(pipes[argc - 2][0]);
-            close(pipes[argc - 2][1]);
-        }
-        char *args[] = {argv[argc - 1], NULL};
-        execvp(args[0], args);
-        perror("Exec error");
-        exit(EXIT_FAILURE);
-    } else {
-        close(pipes[argc - 2][0]);
+    for (int i = 0; i < argc - 1; i++) {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
     }
 
     // Wait for all child processes to finish.
