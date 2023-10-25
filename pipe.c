@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
             }
             
             for (int j = 0; j < argc - 1; j++) {
-                close(pipes[j][0]);
-                close(pipes[j][1]);
+                if (j != i) close(pipes[j][1]); // Close write end if not the current command
+                if (j != i - 1) close(pipes[j][0]); // Close read end if not the previous command
             }
 
             char *args[] = {argv[i + 1], NULL};
