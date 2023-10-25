@@ -6,17 +6,15 @@
 #include <errno.h>
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        errno = EINVAL;
-        perror("Invalid number of arguments");
-        exit(errno);
+    if (argc < 2) { // at least one command is required
+        fprintf(stderr, "Invalid number of arguments\n");
+        exit(EINVAL);
     }
 
-    int pipes[argc - 1][2];
-    int status;
-    int exit_code = 0;
+    int pipes[argc - 2][2];
+    pid_t pids[argc - 1];
 
-    for (int i = 0; i < argc - 1; i++) {
+    for (int i = 0; i < argc - 2; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("Pipe creation failed");
             exit(-1);
@@ -31,17 +29,15 @@ int main(int argc, char *argv[]) {
         } else if (pid == 0) { // Child process
             if (i != 0) { // Not the first command
                 dup2(pipes[i - 1][0], STDIN_FILENO);
-                close(pipes[i - 1][0]);
-                close(pipes[i - 1][1]);
             }
             
             if (i != argc - 2) { // Not the last command
                 dup2(pipes[i][1], STDOUT_FILENO);
             }
             
-            for (int j = 0; j < argc - 1; j++) {
-                if (j != i) close(pipes[j][1]); // Close write end if not the current command
-                if (j != i - 1) close(pipes[j][0]); // Close read end if not the previous command
+            for (int j = 0; j < argc - 2; j++) {
+                close(pipes[j][0]);
+                close(pipes[j][1]);
             }
 
             char *args[] = {argv[i + 1], NULL};
@@ -49,16 +45,23 @@ int main(int argc, char *argv[]) {
             perror("Exec Error");
             exit(-1);
         } else {
-            wait(&status);
-            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-                exit_code = WEXITSTATUS(status);
-            }
+            pids[i] = pid;
         }
     }
 
-    for (int i = 0; i < argc - 1; i++) {
+    // Close all pipe ends in the parent
+    for (int i = 0; i < argc - 2; i++) {
         close(pipes[i][0]);
         close(pipes[i][1]);
+    }
+
+    int exit_code = 0;
+    for (int i = 0; i < argc - 1; i++) {
+        int status;
+        waitpid(pids[i], &status, 0);
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+            exit_code = WEXITSTATUS(status);
+        }
     }
 
     exit(exit_code);
