@@ -3,11 +3,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Invalid number of arguments\n");
-        exit(EXIT_FAILURE);
+        errno = EINVAL;
+        perror("Invalid number of arguments");
+        exit(errno);
     }
 
     int pipes[argc - 1][2];
