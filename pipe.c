@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < argc - 1; i++) {
         if (pipe(pipes[i]) == -1) {
             perror("Pipe creation failed");
-            exit(-1);
+            exit(errno);
         }
     }
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
         pid_t pid = fork();
         if (pid == -1) {
             perror("Fork failed");
-            exit(-1);
+            exit(errno);
         } else if (pid == 0) { // Child process
             if (i != 0) { // Not the first command
                 dup2(pipes[i - 1][0], STDIN_FILENO);
@@ -45,8 +45,8 @@ int main(int argc, char *argv[]) {
             char *args[] = {argv[i + 1], NULL};
             execvp(args[0], args);
             perror("Exec Error");
-            exit(-1);
-        } 
+            exit(errno);
+        }
     }
 
     for (int i = 0; i < argc - 1; i++) {
