@@ -7,11 +7,14 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Invalid number of arguments\n");
-        exit(EINVAL); // Explicitly return 1 instead of errno
+        errno = EINVAL;
+        perror("Invalid number of arguments");
+        exit(errno);
     }
 
     int pipes[argc - 1][2];
+    int status;
+    int exit_code = 0;
 
     for (int i = 0; i < argc - 1; i++) {
         if (pipe(pipes[i]) == -1) {
@@ -19,8 +22,6 @@ int main(int argc, char *argv[]) {
             exit(-1);
         }
     }
-
-    int overall_status = 0; // To track if any command fails
 
     for (int i = 0; i < argc - 1; i++) {
         pid_t pid = fork();
@@ -47,6 +48,11 @@ int main(int argc, char *argv[]) {
             execvp(args[0], args);
             perror("Exec Error");
             exit(-1);
+        } else {
+            wait(&status);
+            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+                exit_code = WEXITSTATUS(status);
+            }
         }
     }
 
@@ -55,8 +61,5 @@ int main(int argc, char *argv[]) {
         close(pipes[i][1]);
     }
 
-    // Wait for all child processes to finish.
-    int status;
-    for (int i = 0; i < argc - 1; i++) {
-        wait(&status);
-        if (WIFEXIT
+    exit(exit_code);
+}
