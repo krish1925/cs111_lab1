@@ -6,7 +6,7 @@
 #include <errno.h>
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) { // at least one command is required
+    if (argc < 2) { // at least one command is required
         fprintf(stderr, "Invalid number of arguments\n");
         exit(EINVAL);  // exit with einval
     }
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
             char *args[] = {argv[i + 1], NULL};
             execvp(args[0], args);
             perror("Exec Error");
-            exit(-3);
+            exit(-3);
         } else {
             pids[i] = pid;
         }}
